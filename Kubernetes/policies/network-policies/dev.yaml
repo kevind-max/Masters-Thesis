@@ -1,0 +1,30 @@
+# Each stage is isolated and can only interact with necessary resources
+
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: build-stage-isolation
+  namespace: cicd
+spec:
+  podSelector:
+    matchLabels:
+      stage: dev # dev env
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: source-repo
+    ports:
+    - protocol: TCP
+      port: 22 # SSH for source code checkout
+  egress:
+  - to:
+    - podSelector:
+        matchLabels:
+          app: artifact-repo
+    ports:
+    - protocol: TCP
+      port: 8080 # Push build artifacts

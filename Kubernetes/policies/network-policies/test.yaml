@@ -1,0 +1,29 @@
+# Each stage is isolated and can only interact with necessary resources
+
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: test-stage-isolation
+  namespace: cicd
+spec:
+  podSelector:
+    matchLabels:
+      stage: test # test env
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: artifact-repo
+    ports:
+    - protocol: TCP
+      port: 8080 # Pull build artifacts
+  egress:
+  - to:
+    - ipBlock:
+        cidr: 0.0.0.0/0
+    ports:
+    - protocol: TCP
+      port: 443 # Access external test services
