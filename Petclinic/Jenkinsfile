@@ -1,0 +1,122 @@
+pipeline {
+    agent any 
+    
+    tools{
+        jdk 'jdk11'
+        maven 'maven3'
+    }
+    
+    environment {
+        SCANNER_HOME=tool 'sonar-scanner'
+        GPG_KEY_ID = 'your-gpg-key-id'
+        SIGNING_PASSWORD = credentials('signing-password')
+        DOCKERHUB_CREDENTIALS = credentials('dockerhub-credentials')
+    }
+    
+    stages{
+        
+        stage("Git Checkout"){
+            steps{
+                git branch: 'main', changelog: false, poll: false, url: 'https://github.com/kevind-max/Masters-Thesis.git'
+            }
+        }
+        
+        stage("Compile"){
+            steps{
+                sh "mvn clean compile"
+            }
+        }
+        
+         stage("Test Cases"){
+            steps{
+                sh "mvn test"
+            }
+        }
+        
+        stage("Sonarqube Analysis "){
+            steps{
+                withSonarQubeEnv('sonar-server') {
+                    sh ''' $SCANNER_HOME/bin/sonar-scanner -Dsonar.projectName=Petclinic \
+                    -Dsonar.java.binaries=. \
+                    -Dsonar.projectKey=Petclinic '''
+    
+                }
+            }
+        }
+        
+        stage("OWASP Dependency Check"){
+            steps{
+                dependencyCheck additionalArguments: '--scan ./ --format HTML ', odcInstallation: 'DP'
+                dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
+            }
+        }
+        
+         stage("Build"){
+            steps{
+                sh " mvn clean install"
+            }
+        }
+        
+        stage("Docker Build & Sign") {
+            steps {
+                script {
+                    withDockerRegistry(credentialsId: 'dockerhub-credentials', toolName: 'docker') {
+                        sh "docker build -t adijaiswal/pet-clinic123:latest ."
+                        sh "docker tag adijaiswal/pet-clinic123:latest adijaiswal/pet-clinic123:latest"
+                        sh "docker push adijaiswal/pet-clinic123:latest"
+                        sh """
+                        docker save adijaiswal/pet-clinic123:latest | gpg --batch --yes --passphrase $SIGNING_PASSWORD --output pet-clinic123.tar.gpg --sign
+                        docker push adijaiswal/pet-clinic123:latest
+                        """
+                    }
+                }
+            }
+        }
+        
+        stage("TRIVY"){
+            steps{
+                sh " trivy image adijaiswal/pet-clinic123:latest"
+            }
+        }
+
+        stage("DAST Analysis") {
+            steps {
+                sh "docker run -t owasp/zap2docker-stable zap-baseline.py -t http://localhost:8080 -r dast-report.html"
+                archiveArtifacts artifacts: 'dast-report.html', allowEmptyArchive: true
+            }
+        }
+
+        stage("Apply Network Policies") {
+            steps {
+                sh "kubectl apply -f ./kubernetes/network-policies.yaml"
+            }
+        }
+
+        stage("Deployment with Rollback") {
+            steps {
+                script {
+                    try {
+                        sh "kubectl apply -f deployment.yaml"
+                    } catch (Exception e) {
+                        sh "kubectl rollout undo deployment/pet-clinic"
+                        throw e
+                    }
+                }
+            }
+        }
+
+        stage("Deploy To Tomcat") {
+            steps {
+                sh "cp /var/lib/jenkins/workspace/CI-CD/target/petclinic.war /opt/apache-tomcat-9.0.65/webapps/"
+            }
+        }
+    }
+
+        
+        stage("Deploy To Tomcat"){
+            steps{
+                sh "cp  /var/lib/jenkins/workspace/CI-CD/target/petclinic.war /opt/apache-tomcat-9.0.65/webapps/"
+            }
+        }
+    }
+}
