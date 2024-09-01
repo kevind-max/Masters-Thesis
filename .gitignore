@@ -1,0 +1,83 @@
+# Ignore Maven and Gradle build directories
+target/
+build/
+
+# Ignore Maven-specific files
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+
+# Ignore Gradle-specific files
+.gradle/
+build/
+
+# Ignore dependency directories
+lib/
+dependencies/
+dependency-reduced-pom.xml
+
+# Ignore class files
+*.class
+
+# Ignore log files
+*.log
+log/
+
+# Ignore compiled Java files
+*.jar
+*.war
+*.ear
+
+# Ignore IDE-specific files and directories
+.idea/
+*.iml
+*.ipr
+*.iws
+.project
+.classpath
+.settings/
+bin/
+.vscode/
+
+# Ignore OS generated files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*.bak
+
+# Ignore temporary files
+*.tmp
+*.out
+*.class
+*.pyc
+*.pyo
+
+# Ignore environment variable files
+.env
+.env.local
+.env.*.local
+
+# Ignore Kubernetes configuration files
+kubeconfig
+*.kubeconfig
+secrets.yaml
+*.secret.yaml
+*.secret.json
+
+# Ignore Helm directories and files
+charts/
+*.tgz
+release-name.*
+.helm/
+
+# Ignore files related to Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Ignore Kubernetes-specific directories and files
+.minikube/
+minikube/
